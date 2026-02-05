@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect } from "react";
-import { initialState, type ActivityEntry, type Credentials, type FoodEntry } from "../types";
+import { createContext, useContext, useEffect, useState } from "react";
+import { initialState, type ActivityEntry, type Credentials, type FoodEntry, type User } from "../types";
 import { useNavigate } from "react-router-dom";
 import mockApi from "../assets/mockApi";
 
@@ -69,7 +69,7 @@ export const AppProvider = ({children} : {children: React.ReactNode}) => {
         } else {
             setIsUserFetched(true);
         }
-    })
+    },[]);
 
 
 
