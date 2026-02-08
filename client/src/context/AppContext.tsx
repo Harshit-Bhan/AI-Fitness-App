@@ -65,7 +65,7 @@ export const AppProvider = ({children} : {children: React.ReactNode}) => {
                 await fetchUser(token);
                 await fetchFoodLogs();
                 await fetchActivityLogs();
-            })();
+            })(); 
         } else {
             setIsUserFetched(true);
         }
