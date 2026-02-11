@@ -43,11 +43,13 @@ export const AppProvider = ({children} : {children: React.ReactNode}) => {
 
     const fetchFoodLogs = async () => {
         const { data } = await mockApi.foodLogs.list()
+        console.log("FETCHED FOOD:", data);
         setAllFoodLogs(data);
     }
 
     const fetchActivityLogs = async () => {
         const { data } = await mockApi.activityLogs.list()
+        console.log("FETCHED ACTIVITY:", data);
         setAllActivityLogs(data);
     }
 
