@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { initialState, type ActivityEntry, type Credentials, type FoodEntry, type User } from "../types";
 import { useNavigate } from "react-router-dom";
-import mockApi from "../assets/mockApi";
 import api from "../configs/api";
 import toast from "react-hot-toast";
+
 
 const AppContext = createContext(initialState)
 
@@ -63,9 +63,13 @@ export const AppProvider = ({children} : {children: React.ReactNode}) => {
             }
             api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         } catch (error: any) {
-                    console.log(error);
-                    toast.error(error?.response?.data?.error?.message || error?.message);
-                }
+            console.log(error);
+            localStorage.removeItem('token');
+            setUser(null);
+            setOnboardingCompleted(false);
+            delete api.defaults.headers.common['Authorization'];
+            toast.error(error?.response?.data?.error?.message || error?.message);
+        }
             setIsUserFetched(true);
     }
 
@@ -76,7 +80,7 @@ export const AppProvider = ({children} : {children: React.ReactNode}) => {
                     Authorization: `Bearer ${token}`
                 }
             })
-            setAllFoodLogs(data.data.data);
+            setAllFoodLogs(data);
         } catch (error: any) {
             console.log(error);
             toast.error(error?.response?.data?.error?.message || error?.message);
@@ -88,7 +92,7 @@ export const AppProvider = ({children} : {children: React.ReactNode}) => {
             const {data} = await api.get('/api/activity-logs',{headers:{
                 Authorization: `Bearer ${token}`
             }})
-            setAllActivityLogs(data.data.data);
+            setAllActivityLogs(data);
         } catch (error: any) {
             console.log(error);
             toast.error(error?.response?.data?.error?.message || error?.message);
@@ -99,19 +103,22 @@ export const AppProvider = ({children} : {children: React.ReactNode}) => {
         localStorage.removeItem('token');
         setUser(null);
         setOnboardingCompleted(false);
-        api.defaults.headers.common['Authorization'] = '';
+        delete api.defaults.headers.common['Authorization'];
         navigate('/login');
     }
 
     useEffect(() => {
         const token = localStorage.getItem('token')
-        if(token){
-            (async () => {
-                await fetchUser(token);
-                await fetchFoodLogs(token);
-                await fetchActivityLogs(token);
-            })(); 
-        } 
+        if(!token){
+            setIsUserFetched(true);
+            return;
+        }
+
+        (async () => {
+            await fetchUser(token);
+            await fetchFoodLogs(token);
+            await fetchActivityLogs(token);
+        })();
         },[]);
 
 

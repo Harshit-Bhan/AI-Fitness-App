@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom"
+import { Navigate, Route, Routes } from "react-router-dom"
 import Dashboard from "./pages/Dashboard"
 import FoodLog from "./pages/FoodLog"
 import ActivityLog from "./pages/ActivityLog"
@@ -13,24 +13,62 @@ import { Toaster } from "react-hot-toast"
 const App = () => {
   const {user,isUserFetched,onboardingCompleted} = useAppContext();
 
-  if(!user){
-    return isUserFetched ? <Login/> : <Loading/>
-  }
-
-  if(!onboardingCompleted){
-    return <Onboarding/> 
+  if(!isUserFetched){
+    return <Loading/>
   }
 
   return (
     <>
-    <Toaster/>
+      <Toaster/>
       <Routes>
-        <Route path='/' element={<Layout/>}>
+        <Route
+          path="/login"
+          element={
+            user ? (
+              <Navigate to={onboardingCompleted ? "/" : "/onboarding"} replace />
+            ) : (
+              <Login />
+            )
+          }
+        />
+        <Route
+          path="/onboarding"
+          element={
+            !user ? (
+              <Navigate to="/login" replace />
+            ) : onboardingCompleted ? (
+              <Navigate to="/" replace />
+            ) : (
+              <Onboarding />
+            )
+          }
+        />
+        <Route
+          path="/"
+          element={
+            !user ? (
+              <Navigate to="/login" replace />
+            ) : !onboardingCompleted ? (
+              <Navigate to="/onboarding" replace />
+            ) : (
+              <Layout />
+            )
+          }
+        >
           <Route index element={<Dashboard/>}/>
           <Route path="food" element={<FoodLog/>}/>
           <Route path="activity" element={<ActivityLog/>}/>
           <Route path="profile" element={<Profile/>}/>
-        </Route> 
+        </Route>
+        <Route
+          path="*"
+          element={
+            <Navigate
+              to={!user ? "/login" : !onboardingCompleted ? "/onboarding" : "/"}
+              replace
+            />
+          }
+        />
       </Routes>
     </>
   )
