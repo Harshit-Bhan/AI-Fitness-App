@@ -7,7 +7,7 @@ import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import { ageRanges, goalOptions } from '../assets/assets';
 import Slider from '../components/ui/Slider';
-import api from '../configs/api';
+import api, { getApiErrorMessage } from '../configs/api';
 
 const Onboarding = () => {
 
@@ -46,13 +46,13 @@ const Onboarding = () => {
       };
       localStorage.setItem('fitnessUser',JSON.stringify(userData))
       try {
-        await api.put(`api/users/${user?.id}`, userData)
+        await api.put(`/api/users/${user?.id}`, userData)
         toast.success('Profile updated successfully')
         setOnboardingCompleted(true);
         fetchUser(user?.token || "");
-      } catch (error: any) {
+      } catch (error) {
         console.log(error);
-        toast.error('Failed to update profile');
+        toast.error(getApiErrorMessage(error, 'Failed to update profile.'));
       }
     }
   }
@@ -130,8 +130,7 @@ const Onboarding = () => {
                     <button key={option.value} 
                     onClick={()=>{
                       const age = Number(formData.age);
-                      const range = ageRanges.find((r) => age <= r.max) || ageRanges
-                      [ageRanges.length - 1]
+                      const range = ageRanges.find((r) => age <= r.max) || ageRanges[ageRanges.length - 1]
 
                       let intake = range.maintain;
                       let burn = range.burn;

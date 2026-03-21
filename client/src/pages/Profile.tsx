@@ -9,7 +9,7 @@ import { goalLabels, goalOptions } from "../assets/assets";
 import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
 import toast from "react-hot-toast";
-import api from "../configs/api";
+import api, { getApiErrorMessage } from "../configs/api";
 
 
 const Profile = () => {
@@ -45,9 +45,9 @@ const Profile = () => {
       await api.put(`/api/users/${user?.id || ''}`, updates)
       await fetchUser(user?.token || '');
       toast.success('Profile updated successfully')
-    } catch (error: any){
+    } catch (error){
       console.log(error);
-      toast.error(error?.message || 'Failed to update profile');      
+      toast.error(getApiErrorMessage(error, 'Failed to update profile.'));      
     }
     setIsEditing(false);
   }

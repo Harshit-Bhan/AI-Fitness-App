@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAppContext } from '../context/AppContext'
 import type { FoodEntry, FormData } from '../types';
 import Card from '../components/ui/Card';
@@ -7,11 +7,12 @@ import Button from '../components/ui/Button';
 import { Loader2Icon, PlusIcon, Trash2Icon, UtensilsCrossedIcon } from 'lucide-react';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
-import mockApi from '../assets/mockApi';
+import toast from 'react-hot-toast';
+import api, { getApiErrorMessage } from '../configs/api';
 
 const FoodLog = () => {
 
-  const {allFoodLogs,setAllFoodLogs} =  useAppContext();
+  const {user, allFoodLogs, fetchFoodLogs} =  useAppContext();
 
   const [entries,setEntries] = useState<FoodEntry[]>([])
   const [showForm,setShowForm] = useState(false);
@@ -47,7 +48,46 @@ const FoodLog = () => {
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if(!file) return;
-    // Implement image analysis
+    setLoading(true);
+    const formData = new FormData();
+    formData.append('image',file)
+    try {
+      const {data} = await api.post('/api/image-analysis',formData);
+      const result = data.result;
+      let mealType = '';
+
+      const hour = new Date().getHours();
+
+      if(hour >=0 && hour < 12){
+        mealType = 'breakfast';
+      } else if(hour >= 12 && hour < 16){
+        mealType = 'lunch';
+      } else if(hour >= 16 && hour < 18){
+        mealType = 'snack';
+      } else if(hour >= 18 && hour < 24){
+        mealType = 'dinner'
+      }
+
+      if(!mealType || !result.name || !result.calories){
+        return toast.error('Missing data')
+      } 
+
+      // Save the result to the database
+       await api.post('/api/food-logs',{data: {
+        name: result.name , calories: result.calories, mealType
+      }})
+      await fetchFoodLogs(user?.token || '');
+
+      // reset input
+      if(inputRef.current){
+        inputRef.current.value = ""
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error(getApiErrorMessage(error, 'Failed to analyze image.'));      
+    } finally {
+      setLoading(false);
+    }
     };
 
   useEffect(() => {
@@ -56,27 +96,50 @@ const FoodLog = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      const {data} = await mockApi.foodLogs.create({data: formData})
-      setAllFoodLogs(prev => [...prev, data])
-      setFormData({name: '', calories: 0 , mealType: ''})
-      setShowForm(false)
+
+      if(!formData.name.trim() || !formData.calories || formData.calories <= 0 || !formData.mealType){
+        return toast.error('Please fill in all fields with valid values');
+      }
+
+      try {
+        await api.post('/api/food-logs',{data: formData})
+        await fetchFoodLogs(user?.token || '');
+        setFormData({name: '', calories: 0 , mealType: ''})
+        setShowForm(false)
+      } catch (error) {
+        console.log(error);
+        toast.error(getApiErrorMessage(error, 'Failed to save food log.'));
+      }
   }
 
   const handleDelete = async (documentId: string) => {
     try {
-      const confirm = window.confirm('Are you sure you want to delete this entry?');
+      const confirm = window.confirm("Are you sure you want to delete this entry?");
       if(!confirm) return;
-      await mockApi.foodLogs.delete(documentId);
-      setAllFoodLogs(prev => prev.filter((e: FoodEntry) => e.documentId !== documentId))
+
+      await api.delete(`/api/food-logs/${documentId}`)
+      await fetchFoodLogs(user?.token || '');
     }
-    catch (error: any) {
+    catch (error) {
       console.log(error);
-      toast.error(error?.message | "Failed to delete food")
+      toast.error(getApiErrorMessage(error, 'Failed to delete food log.'));
     }
   }
 
   return (
-    <div className='page-container'>
+    <div className='page-container relative'>
+      {loading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/20 backdrop-blur-sm">
+          <Card className="flex items-center gap-3 border-emerald-200/80 bg-white/85 px-6 py-4 shadow-xl backdrop-blur-md dark:border-emerald-900/60 dark:bg-slate-900/85">
+            <Loader2Icon className='size-6 animate-spin text-emerald-600 dark:text-emerald-400'/>
+            <div>
+              <p className="font-semibold text-slate-800 dark:text-white">Analyzing your food</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">This usually takes a moment.</p>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {/* Header */}
       <div className='page-header'>
         <div className='flex items-center justify-between'>
@@ -93,7 +156,7 @@ const FoodLog = () => {
         </div>
       </div>
 
-      <div className='page-content-grid'>
+      <div className={`page-content-grid transition ${loading ? 'pointer-events-none select-none blur-[2px]' : ''}`}>
           {/* Quick Add Section */}
           {!showForm && (
             <div className='space-y-4'>
@@ -123,12 +186,6 @@ const FoodLog = () => {
               </Button>
 
               <input onChange={handleImageChange} type="file" accept="image/*" hidden ref={inputRef} />
-
-              {loading && (
-                <div>
-                  <Loader2Icon className='size-8 text-emerald-600 dark:text-emerald-400 animate-spin'/>
-                </div>
-              )}
             </div>
           )}
 

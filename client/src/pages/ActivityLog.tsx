@@ -3,11 +3,11 @@ import { useAppContext } from '../context/AppContext'
 import type { ActivityEntry } from '../types';
 import Card from '../components/ui/Card';
 import { quickActivities } from '../assets/assets';
-import { ActivityIcon, Dumbbell, DumbbellIcon, PlusIcon, TimerIcon, Trash2Icon } from 'lucide-react';
+import { ActivityIcon, DumbbellIcon, PlusIcon, TimerIcon, Trash2Icon } from 'lucide-react';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
-import mockApi from '../assets/mockApi';
 import { toast } from 'react-hot-toast';
+import api, { getApiErrorMessage } from '../configs/api';
 
 const ActivityLog = () => {
 
@@ -56,18 +56,26 @@ const ActivityLog = () => {
       if(!formData.name.trim() || formData.duration <= 0){
         return toast('Please enter valid data')
       } try {
-        const { data } = await mockApi.activityLogs.create({data: formData});
+        const { data } = await api.post('/api/activity-logs',{data: formData});
         setAllActivityLogs(prev => [...prev,data])
         setFormData({name: '', duration: 0, calories: 0})
         setShowForm(false)
-      } catch (error: any) {
+      } catch (error) {
         console.log(error);
-        toast.error(error?.message || "Failed to add activity");
+        toast.error(getApiErrorMessage(error, 'Failed to add activity.'));
       }
     }
 
     const handleDelete = async (documentId: string) => {
-
+      try {
+        const confirm = window.confirm('Are you sure you want to delete this entry?')
+        if(!confirm) return;
+        await api.delete(`/api/activity-logs/${documentId}`);
+        setAllActivityLogs(prev => prev.filter((a) => a.documentId !== documentId))
+      } catch (error) { 
+        console.log(error);
+        toast.error(getApiErrorMessage(error, 'Failed to delete activity.'))        
+      }
     } 
 
   const totalMinutes: number = activities.reduce((sum , a) => sum + a.duration , 0)

@@ -2,10 +2,12 @@ import { GoogleGenAI } from "@google/genai";
 import fs from "fs";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+
 export const analyseImage = async (filePath: string) => {
 
     try {
-        const base64ImageFile = fs.readFileSync("path/to/small-sample.jpg",{
+        const base64ImageFile = fs.readFileSync(filePath,{
         encoding: "base64",
     });
 
@@ -31,7 +33,7 @@ export const analyseImage = async (filePath: string) => {
     }
 
     const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview",
+        model: GEMINI_MODEL,
         contents: contents,
         config
     });

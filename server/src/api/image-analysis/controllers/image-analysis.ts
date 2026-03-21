@@ -13,7 +13,8 @@ export default {
             const result = await analyseImage(filePath)
             return ctx.send({success: true, result})
         } catch (error) {
-            ctx.internalServerError("Analysis failed",{error: error.message})
+            const message = error instanceof Error ? error.message : 'Unknown analysis error';
+            ctx.internalServerError("Analysis failed",{error: message})
         }
     }
 }

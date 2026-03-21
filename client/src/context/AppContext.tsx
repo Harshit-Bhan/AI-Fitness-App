@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { initialState, type ActivityEntry, type Credentials, type FoodEntry, type User } from "../types";
 import { useNavigate } from "react-router-dom";
-import api from "../configs/api";
+import api, { getApiErrorMessage } from "../configs/api";
 import toast from "react-hot-toast";
 
 
@@ -26,9 +26,9 @@ export const AppProvider = ({children} : {children: React.ReactNode}) => {
             }
             localStorage.setItem('token', data.jwt);
             api.defaults.headers.common['Authorization'] = `Bearer ${data.jwt}`;
-        } catch (error: any) {
+        } catch (error) {
             console.log(error);
-            toast.error(error?.response?.data?.error?.message || error?.message)  
+            toast.error(getApiErrorMessage(error, 'Failed to sign up.'))  
         }
     }
 
@@ -44,9 +44,9 @@ export const AppProvider = ({children} : {children: React.ReactNode}) => {
             }
             localStorage.setItem('token', data.jwt);
             api.defaults.headers.common['Authorization'] = `Bearer ${data.jwt}`;
-        } catch (error: any) {
+        } catch (error) {
             console.log(error);
-            toast.error(error?.response?.data?.error?.message || error?.message);           
+            toast.error(getApiErrorMessage(error, 'Failed to log in.'));           
         }
     }
 
@@ -62,15 +62,18 @@ export const AppProvider = ({children} : {children: React.ReactNode}) => {
                 setOnboardingCompleted(true);
             }
             api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        } catch (error: any) {
+            return true;
+        } catch (error) {
             console.log(error);
             localStorage.removeItem('token');
             setUser(null);
             setOnboardingCompleted(false);
             delete api.defaults.headers.common['Authorization'];
-            toast.error(error?.response?.data?.error?.message || error?.message);
-        }
+            toast.error(getApiErrorMessage(error, 'Failed to fetch user.'));
+            return false;
+        } finally {
             setIsUserFetched(true);
+        }
     }
 
     const fetchFoodLogs = async (token: string) => {
@@ -81,9 +84,9 @@ export const AppProvider = ({children} : {children: React.ReactNode}) => {
                 }
             })
             setAllFoodLogs(data);
-        } catch (error: any) {
+        } catch (error) {
             console.log(error);
-            toast.error(error?.response?.data?.error?.message || error?.message);
+            toast.error(getApiErrorMessage(error, 'Failed to fetch food logs.'));
         }
     }
 
@@ -93,9 +96,9 @@ export const AppProvider = ({children} : {children: React.ReactNode}) => {
                 Authorization: `Bearer ${token}`
             }})
             setAllActivityLogs(data);
-        } catch (error: any) {
+        } catch (error) {
             console.log(error);
-            toast.error(error?.response?.data?.error?.message || error?.message);
+            toast.error(getApiErrorMessage(error, 'Failed to fetch activity logs.'));
         }
     }
 
@@ -114,17 +117,21 @@ export const AppProvider = ({children} : {children: React.ReactNode}) => {
             return;
         }
 
-        (async () => {
-            await fetchUser(token);
-            await fetchFoodLogs(token);
-            await fetchActivityLogs(token);
+        void (async () => {
+            const isAuthenticated = await fetchUser(token);
+            if(!isAuthenticated) return;
+
+            await Promise.all([
+                fetchFoodLogs(token),
+                fetchActivityLogs(token),
+            ]);
         })();
         },[]);
 
 
 
     const value = {
-        user , setUser , isUserFetched , fetchUser , 
+        user , setUser , isUserFetched , fetchUser , fetchFoodLogs ,
         signup , login , logout , 
         onboardingCompleted , setOnboardingCompleted ,
         allFoodLogs , allActivityLogs ,
